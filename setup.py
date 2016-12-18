@@ -8,7 +8,7 @@ except ImportError:
         long_description = f.read()
 
 setup(name='jsua',
-      version='0.0.2',
+      version='0.1.0',
       description='A parser for JSON that can start at an arbitrary point in the file',
       long_description=long_description,
 
@@ -26,10 +26,8 @@ setup(name='jsua',
           'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)'
       ],
 
-      packages=['jsua'],
+      setup_requires=['cffi>=1.9.1'],
+      cffi_modules=['jsua/_jsua_builder.py:ffibuilder'],
+      install_requires=['cffi>=1.9.1'],
 
-      entry_points={
-          'console_scripts': [
-              'jsua=jsua:_main'
-              ],
-          })
+      packages=['jsua'])
