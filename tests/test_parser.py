@@ -6,7 +6,7 @@ import io
 
 class TestParser(Parser):
     def __init__(self):
-        super().__init__()
+        super(TestParser, self).__init__()
         self.events = []
 
     def on_event(self, event):

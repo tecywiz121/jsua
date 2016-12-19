@@ -1,5 +1,9 @@
-from ._jsua import lib as _jsua, ffi
-from collections.abc import Sequence
+from ._jsua import lib, ffi
+
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 class _Buffer(Sequence):
     def __init__(self, size, data):
@@ -36,7 +40,10 @@ class _Buffer(Sequence):
 
     def __setitem__(self, key, value):
         self._chkidx(key)
-        self._data[key] = value
+        try:
+            self._data[key] = value
+        except TypeError:
+            self._data[key] = ord(value)
 
     def release(self):
         self._owns = False
@@ -64,8 +71,8 @@ class MemoryPool(object):
             if self.used > 0:
                 raise ValueError('changing chunk_size while blocks are allocated')
             for x in self.available:
-                _jsua.unallocate_u8(x)
-            self.available.clear()
+                lib.unallocate_u8(x)
+            del self.available[:]
             self._chunk_size = v
 
     def _take(self):
@@ -75,7 +82,7 @@ class MemoryPool(object):
         except IndexError:
             pass
 
-        result = _jsua.allocate_u8(self.chunk_size)
+        result = lib.allocate_u8(self.chunk_size)
         if result == ffi.NULL:
             self.used -= 1
             raise MemoryError
@@ -86,7 +93,7 @@ class MemoryPool(object):
         return _Buffer(self._chunk_size, self._take())
 
     def give_back(self, buf):
-        self.give_back(buf._data)
+        self._give_back(buf._data)
         buf.release()
 
     def _give_back(self, chunk):
@@ -94,18 +101,19 @@ class MemoryPool(object):
             raise ValueError('giving back an extra chunk')
         self.used -= 1
         if len(self.available) >= self.max_available:
-            _jsua.unallocate_u8(chunk)
+            lib.unallocate_u8(chunk)
         else:
             self.available.append(chunk)
 
     def __del__(self):
-        for x in self.available:
-            _jsua.unallocate_u8(x)
-        self.available.clear()
+        # Do best effort clean up. The cffi module may have been unloaded.
+        if lib and lib.unallocate_u8:
+            for x in self.available:
+                lib.unallocate_u8(x)
+        del self.available[:]
 
 pool = MemoryPool()
 
 @ffi.def_extern()
 def pool_give_back(x):
     pool._give_back(ffi.cast('uint8_t *', x))
-

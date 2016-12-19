@@ -7,6 +7,7 @@ from ._jsua import lib, ffi
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from enum import Enum
+from six import with_metaclass
 
 class EventType(Enum):
     OBJ_START   = lib.JSUA_EVT_OBJ_START
@@ -25,7 +26,7 @@ Event = namedtuple('Event', ['type', 'completed', 'data'])
 class ParseError(ValueError):
     pass
 
-class Parser(metaclass=ABCMeta):
+class Parser(with_metaclass(ABCMeta)):
     def __init__(self):
         self._handle = ffi.new_handle(self)
         self._ptr = lib.jsua_parser_new()

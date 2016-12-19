@@ -23,11 +23,12 @@ setup(name='jsua',
           'Development Status :: 3 - Alpha',
           'Intended Audience :: Developers',
           'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 2.7',
           'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)'
       ],
 
       setup_requires=['cffi>=1.9.1'],
       cffi_modules=['jsua/_jsua_builder.py:ffibuilder'],
-      install_requires=['cffi>=1.9.1'],
+      install_requires=['cffi>=1.9.1', 'six'],
 
       packages=['jsua'])
