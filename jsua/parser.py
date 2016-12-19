@@ -5,6 +5,22 @@ Parser for JSON streams capable of starting at an arbitrary location and
 
 from ._jsua import lib, ffi
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
+from enum import Enum
+
+class EventType(Enum):
+    OBJ_START   = lib.JSUA_EVT_OBJ_START
+    OBJ_END     = lib.JSUA_EVT_OBJ_END
+    ARR_START   = lib.JSUA_EVT_ARR_START
+    ARR_END     = lib.JSUA_EVT_ARR_END
+    VAL_STR     = lib.JSUA_EVT_VAL_STR
+    VAL_NUM     = lib.JSUA_EVT_VAL_NUM
+    VAL_BOOL    = lib.JSUA_EVT_VAL_BOOL
+    VAL_NULL    = lib.JSUA_EVT_VAL_NULL
+    COLON       = lib.JSUA_EVT_COLON
+    COMMA       = lib.JSUA_EVT_COMMA
+
+Event = namedtuple('Event', ['type', 'completed', 'data'])
 
 class ParseError(ValueError):
     pass
@@ -47,4 +63,9 @@ class Parser(metaclass=ABCMeta):
 @ffi.def_extern()
 def on_parser_event(event, user_data):
     parser = ffi.from_handle(user_data)
-    parser.on_event(event)
+    data = None
+    if event.size and ffi.NULL != event.data:
+        data = ffi.unpack(ffi.cast('char*', event.data), event.size)
+    parser.on_event(Event(type=EventType(event.type),
+                          completed=bool(event.completed),
+                          data=data))

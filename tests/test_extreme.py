@@ -1,7 +1,15 @@
-from jsua.parser import SynchronizingParser
+from jsua import Parser, pool, Blob
 
 import unittest
 import io
+
+class TestParser(Parser):
+    def __init__(self):
+        super().__init__()
+        self.count = 0
+
+    def on_event(self, event):
+        self.count += 1
 
 class TestExtreme(unittest.TestCase):
     def test_object(self):
@@ -25,15 +33,24 @@ class TestExtreme(unittest.TestCase):
     "kH": {"j1": {}}
 }'''.encode('utf-8')
 
-        previous = 111
+        previous = 114
         while src:
-            backing = io.BytesIO(src)
-            parser = SynchronizingParser(backing)
+            parser = TestParser()
+            pool.chunk_size = len(src)
+            buf = pool.take()
 
-            count = 0
-            for _ in parser.parse():
-                count += 1
-                self.assertTrue(count <= previous)
+            for idx, x in enumerate(src):
+                buf[idx] = x
 
-            previous = count
+            blob = Blob(buf, len(src))
+            parser.feed(blob)
+            parser.feed(Blob())
+
+            self.assertLessEqual(parser.count, previous)
+
+            previous = parser.count
+
+            del parser
+
+            self.assertEqual(pool.used, 0)
             src = src[1:]
