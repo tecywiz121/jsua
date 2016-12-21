@@ -31,4 +31,8 @@ setup(name='jsua',
       cffi_modules=['jsua/_jsua_builder.py:ffibuilder'],
       install_requires=['cffi>=1.9.1', 'six'],
 
-      packages=['jsua'])
+      packages=['jsua'],
+      entry_points={
+        'console_scripts': [
+          'jsua=jsua:_main'
+]})

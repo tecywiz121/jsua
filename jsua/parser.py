@@ -7,7 +7,9 @@ from ._jsua import lib, ffi
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from enum import Enum
-from six import with_metaclass
+from six import with_metaclass, print_
+import traceback
+import sys
 
 class EventType(Enum):
     OBJ_START   = lib.JSUA_EVT_OBJ_START
@@ -20,6 +22,19 @@ class EventType(Enum):
     VAL_NULL    = lib.JSUA_EVT_VAL_NULL
     COLON       = lib.JSUA_EVT_COLON
     COMMA       = lib.JSUA_EVT_COMMA
+
+EVENT_TYPES = sorted((
+    EventType.OBJ_START,
+    EventType.OBJ_END,
+    EventType.ARR_START,
+    EventType.ARR_END,
+    EventType.VAL_STR,
+    EventType.VAL_NUM,
+    EventType.VAL_BOOL,
+    EventType.VAL_NULL,
+    EventType.COLON,
+    EventType.COMMA,
+), key=lambda x: x.value)
 
 Event = namedtuple('Event', ['type', 'completed', 'data'])
 
@@ -61,12 +76,18 @@ class Parser(with_metaclass(ABCMeta)):
     def on_event(self, event):
         pass
 
-@ffi.def_extern()
+def _on_event_error(exc, exc_value, tb):
+    import os
+    print_('Exception in JSUA parser callback:', file=sys.stderr)
+    traceback.print_exception(exc, exc_value, tb, file=sys.stderr)
+    os._exit(1)
+
+@ffi.def_extern(onerror=_on_event_error)
 def on_parser_event(event, user_data):
     parser = ffi.from_handle(user_data)
     data = None
     if event.size and ffi.NULL != event.data:
         data = ffi.unpack(ffi.cast('char*', event.data), event.size)
-    parser.on_event(Event(type=EventType(event.type),
+    parser.on_event(Event(type=EVENT_TYPES[event.type],
                           completed=bool(event.completed),
                           data=data))

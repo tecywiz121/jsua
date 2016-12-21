@@ -1,4 +1,5 @@
 from ._jsua import lib, ffi
+import errno
 
 try:
     from collections.abc import Sequence
@@ -49,6 +50,16 @@ class _Buffer(Sequence):
         self._owns = False
         self._data = ffi.NULL
         self._size = 0
+
+    def read_from(self, fd):
+        if not self._owns or 0 == self._size:
+            raise ValueError('nowhere to put data')
+
+        result = lib.read_into(fd, self._data, self._size)
+        if 0 > result.count:
+            msg = errno.errorcode.get(result.error_code, 'unknown error')
+            raise OSError('{} ({})'.format(msg, result.error_code))
+        return result.count
 
     def __del__(self):
         if self._owns:

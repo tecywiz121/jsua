@@ -6,6 +6,13 @@ jsua_header = r'''
 #include <jsua/parser.h>
 #include <jsua/error.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+
+struct read_result {
+    ssize_t count;
+    int error_code;
+};
 
 uint8_t* allocate_u8(size_t nmemb) {
     return (uint8_t*)malloc(sizeof(uint8_t) * nmemb);
@@ -14,11 +21,24 @@ uint8_t* allocate_u8(size_t nmemb) {
 void unallocate_u8(uint8_t* p) {
     free(p);
 }
+
+struct read_result read_into(int fd, void* buf, size_t count) {
+    struct read_result r;
+    r.count = read(fd, buf, count);
+    r.error_code = errno;
+    return r;
+}
 '''
 
 ffibuilder.set_source('jsua._jsua', jsua_header, libraries=['jsua'])
 
 ffibuilder.cdef(r'''
+struct read_result {
+    ssize_t count;
+    int error_code;
+};
+
+struct read_result read_into(int fd, void* buf, size_t count);
 uint8_t* allocate_u8(size_t nmemb);
 void unallocate_u8(uint8_t* p);
 
